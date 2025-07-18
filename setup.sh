@@ -2,7 +2,7 @@
 
 CORES=$(nproc)
 VSCODE_DOTFILES_DIR="$(pwd)/configs"
-VSCODE_EXTENSIONS_FILE="$(pwd)/extensions.txt"
+VSCODE_EXTENSIONS_FILE="$(pwd)/oss-extensions.txt"
 VSCODE_TARGET_DIR="$HOME/.config/Code - OSS"
 
 RED='\033[0;31m'
@@ -341,7 +341,7 @@ install_extensions_parallel() {
     
     printf '%s\n' "${extensions[@]}" | \
         parallel \
-        --jobs $CORES \
+        --jobs 16 \
         --progress \
         --bar \
         --eta \
@@ -434,7 +434,7 @@ while getopts "suech" opt; do
             ;;
         e)
             clear
-            install_extensions_concurrent
+            install_extensions
             ;;
         c)
             clear
