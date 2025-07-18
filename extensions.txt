@@ -72,5 +72,3 @@ wix.vscode-import-cost
 xabikos.javascriptsnippets
 xabikos.reactsnippets
 yoavbls.pretty-ts-errors
-yzhang.markdown-all-in-one
-zaaack.markdown-editor

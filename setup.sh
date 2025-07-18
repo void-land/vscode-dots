@@ -1,29 +1,18 @@
 #!/bin/bash
 
+CORES=$(nproc)
 VSCODE_DOTFILES_DIR="$(pwd)/configs"
 VSCODE_EXTENSIONS_FILE="$(pwd)/extensions.txt"
-
-# Target directory for VS Code OSS
 VSCODE_TARGET_DIR="$HOME/.config/Code - OSS"
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Default extensions list (can be overridden by extensions.txt file)
+declare -a LOADED_EXTENSIONS=()
 declare -a DEFAULT_EXTENSIONS=(
-    "ms-python.python"
-    "ms-vscode.cpptools"
-    "ms-vscode.vscode-typescript-next"
-    "esbenp.prettier-vscode"
     "bradlc.vscode-tailwindcss"
-    "ms-vscode.vscode-json"
-    "redhat.vscode-yaml"
-    "ms-vscode.hexeditor"
-    "github.copilot"
-    "ms-vscode.remote-ssh"
 )
 
 # Trap for clean exit
@@ -35,7 +24,6 @@ exit_trap() {
     exit 1
 }
 
-# Utility functions
 try() {
     local log_file=$(mktemp)
     if ! eval "$@" &>"$log_file"; then
@@ -48,11 +36,11 @@ try() {
 }
 
 log() {
-    echo -e "\n${GREEN}[+]${NC} $1"
+    echo -e "\n${GREEN}[+]${NC} $1" >&2
 }
 
 error() {
-    echo -e "${RED}[!]${NC} $1"
+    echo -e "${RED}[!]${NC} $1" >&2
 }
 
 ask_prompt() {
@@ -87,7 +75,6 @@ check_vscode_oss() {
     fi
 }
 
-# Create necessary directories
 create_target_dirs() {
     log "Creating target directories..."
     mkdir -p "$VSCODE_TARGET_DIR"
@@ -115,27 +102,6 @@ create_link() {
     ln -sfn "$source" "$target"
     echo "$source ===> $target"
 }
-
-# create_links() {
-#     local source_dir=$1
-#     local target_dir=$2
-    
-#     if [ ! -d "$source_dir" ]; then
-#         echo "Source directory does not exist: $source_dir"
-#         return 1
-#     fi
-    
-#     if [ ! -d "$target_dir" ]; then
-#         mkdir -p "$target_dir"
-#     fi
-    
-#     for item in "$source_dir"/* "$source_dir"/.*; do
-#         if [ -e "$item" ] && [ "$item" != "$source_dir/." ] && [ "$item" != "$source_dir/.." ]; then
-#             echo "$item ===> $target_dir"
-#             ln -sfn "$item" "$target_dir/"
-#         fi
-#     done
-# }
 
 create_links() {
     local source_dir=$1
@@ -191,22 +157,18 @@ delete_links() {
 }
 
 load_extensions() {
-    local extensions=()
+    LOADED_EXTENSIONS=()
     
     if [ -f "$VSCODE_EXTENSIONS_FILE" ]; then
-        log "Loading extensions from $VSCODE_EXTENSIONS_FILE"
         while IFS= read -r line; do
-            # Skip empty lines and comments
             if [[ ! -z "$line" && ! "$line" =~ ^[[:space:]]*# ]]; then
-                extensions+=("$line")
+                LOADED_EXTENSIONS+=("$line")
             fi
         done < "$VSCODE_EXTENSIONS_FILE"
     else
         log "Extensions file not found, using default extensions"
-        extensions=("${DEFAULT_EXTENSIONS[@]}")
+        LOADED_EXTENSIONS=("${DEFAULT_EXTENSIONS[@]}")
     fi
-    
-    echo "${extensions[@]}"
 }
 
 install_extensions() {
@@ -219,8 +181,9 @@ install_extensions() {
         return 0
     fi
     
-    local extensions=($(load_extensions))
-    
+    load_extensions
+    local extensions=("${LOADED_EXTENSIONS[@]}")
+
     if [ ${#extensions[@]} -eq 0 ]; then
         error "No extensions to install"
         return 0
@@ -247,6 +210,167 @@ install_extensions() {
     
     log "Extension installation completed"
 }
+
+install_extensions_concurrent() {
+    check_vscode_oss
+    
+    log "Installing VS Code extensions..."
+    
+    if ! ask_prompt "Do you want to install VS Code extensions?"; then
+        error "Extension installation cancelled..."
+        return 0
+    fi
+    
+    load_extensions
+    local extensions=("${LOADED_EXTENSIONS[@]}")
+    
+    if [ ${#extensions[@]} -eq 0 ]; then
+        error "No extensions to install"
+        return 0
+    fi
+    
+    echo "Extensions to install:"
+    for ext in "${extensions[@]}"; do
+        echo "  - $ext"
+    done
+    
+    if ! ask_prompt "Do you want to continue with installation?"; then
+        error "Extension installation cancelled..."
+        return 0
+    fi
+    
+    local max_concurrent="$CORES"
+    local -a pids=()
+    
+    install_extension() {
+        local extension="$1"
+        echo "Installing: $extension"
+        if code-oss --install-extension "$extension" --force; then
+            echo -e "${GREEN}✓${NC} Successfully installed: $extension"
+        else
+            echo -e "${RED}✗${NC} Failed to install: $extension"
+        fi
+    }
+    
+    for extension in "${extensions[@]}"; do
+        install_extension "$extension" &
+        pids+=($!)
+        
+        # Wait if number of background jobs reaches max concurrent
+        while [ ${#pids[@]} -ge $max_concurrent ]; do
+            for i in "${!pids[@]}"; do
+                if ! kill -0 "${pids[i]}" 2>/dev/null; then
+                    unset 'pids[i]'
+                fi
+            done
+            # Clean up array keys
+            pids=(${pids[@]})
+            sleep 0.1
+        done
+    done
+    
+    # Wait for all background jobs to finish
+    for pid in "${pids[@]}"; do
+        wait $pid
+    done
+    
+    log "Extension installation completed"
+}
+
+install_extensions_parallel() {
+    check_vscode_oss
+    
+    log "Installing VS Code extensions..."
+    
+    if ! ask_prompt "Do you want to install VS Code extensions?"; then
+        error "Extension installation cancelled..."
+        return 0
+    fi
+    
+    load_extensions
+    local extensions=("${LOADED_EXTENSIONS[@]}")
+    
+    if [ ${#extensions[@]} -eq 0 ]; then
+        error "No extensions to install"
+        return 0
+    fi
+    
+    echo "Extensions to install:"
+    for ext in "${extensions[@]}"; do
+        echo "  - $ext"
+    done
+    
+    if ! ask_prompt "Do you want to continue with installation?"; then
+        error "Extension installation cancelled..."
+        return 0
+    fi
+    
+    if ! command -v parallel &> /dev/null; then
+        error "GNU parallel is not installed. Please install it first:"
+        echo "  - On Ubuntu/Debian: sudo apt install parallel"
+        echo "  - On RHEL/CentOS: sudo yum install parallel"
+        echo "  - On Arch: sudo pacman -S parallel"
+        echo "  - On Void: sudo xbps-install -S parallel"
+        return 1
+    fi
+    
+    install_single_extension() {
+        local extension="$1"
+        local start_time=$(date +%s)
+        local temp_file=$(mktemp)
+        
+        echo "🔄 Starting installation: $extension"
+        
+        if code-oss --install-extension "$extension" --force &> "$temp_file"; then
+            local end_time=$(date +%s)
+            local duration=$((end_time - start_time))
+            echo -e "${GREEN}✓${NC} Successfully installed: $extension (${duration}s)"
+        else
+            echo -e "${RED}✗${NC} Failed to install: $extension"
+            echo "Error details:"
+            cat "$temp_file" | head -5
+        fi
+        
+        rm -f "$temp_file"
+    }
+    
+    export -f install_single_extension
+    export GREEN RED NC
+    
+    echo "Starting parallel installation of ${#extensions[@]} extensions..."
+    
+    printf '%s\n' "${extensions[@]}" | \
+        parallel \
+        --jobs $CORES \
+        --progress \
+        --bar \
+        --eta \
+        --joblog /tmp/vscode_extensions.log \
+        install_single_extension
+    
+    # Show summary
+    echo ""
+    echo "Installation Summary:"
+    echo "====================="
+    if [ -f /tmp/vscode_extensions.log ]; then
+        local total=$(wc -l < /tmp/vscode_extensions.log)
+        local succeeded=$(grep -c "^[^#].*\s0\s" /tmp/vscode_extensions.log || echo "0")
+        local failed=$((total - succeeded))
+        
+        echo "Total extensions: $total"
+        echo "Succeeded: $succeeded"
+        echo "Failed: $failed"
+        
+        if [ $failed -gt 0 ]; then
+            echo ""
+            echo "Failed extensions:"
+            grep "^[^#].*\s[^0]\s" /tmp/vscode_extensions.log | awk '{print "  - " $NF}'
+        fi
+    fi
+    
+    log "Extension installation completed"
+}
+
 
 stow_config() {
     log "Stowing VS Code configuration..."
@@ -310,7 +434,7 @@ while getopts "suech" opt; do
             ;;
         e)
             clear
-            install_extensions
+            install_extensions_concurrent
             ;;
         c)
             clear
