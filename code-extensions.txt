@@ -6,7 +6,6 @@ bierner.markdown-preview-github-styles
 biomejs.biome
 bmalehorn.vscode-fish
 bradlc.vscode-tailwindcss
-brandonkirbyson.vscode-animations
 cardinal90.multi-cursor-case-preserve
 christian-kohler.npm-intellisense
 chrmarti.regex
