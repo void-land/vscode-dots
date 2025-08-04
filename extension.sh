@@ -6,7 +6,7 @@
 EXTENSIONS_FILE="$(pwd)/oss-extensions.txt"
 DOWNLOAD_DIR="$(pwd)/downloads"
 OUTPUT_DIR="$(pwd)/extension_info"
-INSTALL_LOG="$(pwd)/install_log.txt"
+INSTALL_LOG="$(pwd)/install.log"
 
 # Color codes (matching your setup.sh style)
 RED='\033[0;31m'
@@ -562,7 +562,7 @@ complete_operation() {
     fi
     
     save_extension_info
-    download_extensions_parallel
+    download_extensions_curl_parallel
     install_from_vsix
     list_extensions
     generate_summary
