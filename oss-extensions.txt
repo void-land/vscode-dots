@@ -37,7 +37,6 @@ naumovs.color-highlight
 orta.vscode-twoslash-queries
 pflannery.vscode-versionlens
 prisma.prisma
-ritwickdey.liveserver
 sleistner.vscode-fileutils
 streetsidesoftware.code-spell-checker
 streetsidesoftware.code-spell-checker-persian

@@ -4,8 +4,9 @@
 # Compatible with the provided setup.sh structure
 
 EXTENSIONS_FILE="$(pwd)/oss-extensions.txt"
-OUTPUT_DIR="$(pwd)/extension_info"
 DOWNLOAD_DIR="$(pwd)/downloads"
+OUTPUT_DIR="$(pwd)/extension_info"
+INSTALL_LOG="$(pwd)/install_log.txt"
 
 # Color codes (matching your setup.sh style)
 RED='\033[0;31m'
@@ -51,9 +52,10 @@ ask_prompt() {
 }
 
 display_help() {
-    echo "Usage: $0 [-f | -d | -p | -l | -c] [-h]"
+    echo "Usage: $0 [-f | -d | -v | -p | -l | -c] [-h]"
     echo "  -f  Fetch extension information only"
     echo "  -d  Download VSIX files (sequential)"
+    echo "  -v  Install from VSIX files (downloaded files)"
     echo "  -p  Download VSIX files (concurrent - 6 parallel downloads)"
     echo "  -l  List extensions with versions"
     echo "  -c  Complete operation (fetch info + parallel download + list)"
@@ -108,6 +110,30 @@ check_parallel_dependency() {
         return 1
     fi
     return 0
+}
+
+detect_vscode() {
+    local vscode_commands=("code" "code-insiders" "codium")
+    local found_command=""
+    
+    for cmd in "${vscode_commands[@]}"; do
+        if command -v "$cmd" &>/dev/null; then
+            found_command="$cmd"
+            break
+        fi
+    done
+    
+    if [ -z "$found_command" ]; then
+        error "VS Code not found. Please install one of: code, code-insiders, codium"
+        echo "Installation instructions:"
+        echo "  - Official VS Code: https://code.visualstudio.com/"
+        echo "  - VS Code Insiders: https://code.visualstudio.com/insiders/"
+        echo "  - VSCodium: https://vscodium.com/"
+        exit 1
+    fi
+    
+    log "Found VS Code command: $found_command"
+    echo "$found_command"
 }
 
 load_extensions() {
@@ -432,6 +458,67 @@ list_extensions() {
     log "Total extensions: $total_extensions"
 }
 
+
+install_from_vsix() {
+    log "Installing extensions from VSIX files..."
+    
+    if ! ask_prompt "Do you want to install extensions from downloaded VSIX files?"; then
+        warn "Installation cancelled..."
+        return 0
+    fi
+    
+    if [ ! -d "$DOWNLOAD_DIR" ]; then
+        error "Download directory not found: $DOWNLOAD_DIR"
+        error "Please run the extension manager with -d or -p to download VSIX files first."
+        return 1
+    fi
+    
+    local vscode_cmd=$(detect_vscode)
+    local vsix_files=($(find "$DOWNLOAD_DIR" -name "*.vsix" -type f))
+    
+    if [ ${#vsix_files[@]} -eq 0 ]; then
+        error "No VSIX files found in $DOWNLOAD_DIR"
+        error "Please download extensions first using the extension manager."
+        return 1
+    fi
+    
+    local total=${#vsix_files[@]}
+    local count=0
+    local success=0
+    local failed=0
+    
+    # Initialize log file
+    echo "Extension Installation Log - $(date)" > "$INSTALL_LOG"
+    echo "========================================" >> "$INSTALL_LOG"
+    echo "" >> "$INSTALL_LOG"
+    
+    echo "Found $total VSIX files to install..."
+    
+    for vsix_file in "${vsix_files[@]}"; do
+        count=$((count + 1))
+        local filename=$(basename "$vsix_file")
+        
+        echo "[$count/$total] Installing: $filename"
+        
+        if $vscode_cmd --install-extension "$vsix_file" --force &>/dev/null; then
+            success=$((success + 1))
+            echo -e "${GREEN}✓${NC} Installed: $filename"
+            echo "[SUCCESS] $filename" >> "$INSTALL_LOG"
+        else
+            failed=$((failed + 1))
+            echo -e "${RED}✗${NC} Failed: $filename"
+            echo "[FAILED] $filename" >> "$INSTALL_LOG"
+        fi
+    done
+    
+    echo "" >> "$INSTALL_LOG"
+    echo "Summary: $success successful, $failed failed" >> "$INSTALL_LOG"
+    
+    log "Installation completed!"
+    echo "Total: $total, Success: $success, Failed: $failed"
+    echo "Log saved to: $INSTALL_LOG"
+}
+
 generate_summary() {
     if [ ! -d "$OUTPUT_DIR" ]; then
         return
@@ -469,24 +556,31 @@ generate_summary() {
 complete_operation() {
     log "Starting complete extension management..."
     
-    if ! ask_prompt "Do you want to perform complete operation (fetch + parallel download + list)?"; then
+    if ! ask_prompt "Do you want to perform complete operation (fetch + parallel download + local install + list)?"; then
         warn "Complete operation cancelled..."
         return 0
     fi
     
     save_extension_info
     download_extensions_parallel
+    install_from_vsix
     list_extensions
     generate_summary
     
     log "Complete operation finished!"
 }
 
+
+
 # Main execution
 check_dependencies
 
-while getopts "fdplch" opt; do
+while getopts "fdplchv" opt; do
     case $opt in
+        v)
+            clear 
+            install_from_vsix
+            ;;
         f)
             clear
             save_extension_info
