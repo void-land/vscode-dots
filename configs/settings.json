@@ -99,7 +99,7 @@
     /* ------------------- Default Formatter and Lang Settings ------------------ */
     // "editor.defaultFormatter": "esbenp.prettier-vscode",
     "[shellscript]": {
-        "editor.defaultFormatter": "foxundermoon.shell-format"
+        "editor.defaultFormatter": "mkhl.shfmt"
     },
     "[css]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
@@ -286,5 +286,6 @@
         "192.168.1.107": "linux"
     },
     "biome.suggestInstallingGlobally": false,
-    "animations.CursorAnimation": true
+    "animations.CursorAnimation": true,
+    "workbench.colorTheme": "GitHub Dark Default"
 }
