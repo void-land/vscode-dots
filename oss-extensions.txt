@@ -50,3 +50,4 @@ vinliao.fast-arrow
 wix.vscode-import-cost
 xabikos.javascriptsnippets
 yoavbls.pretty-ts-errors
+llvm-vs-code-extensions.vscode-clangd
