@@ -35,12 +35,13 @@
         "env-*": true
     },
     "terminal.integrated.rightClickBehavior": "selectWord",
+    "http.proxy": "socks5://127.0.0.1:1080",
     /* ----------------------------- Editor Settings ---------------------------- */
-    // "http.proxy": "socks5://localhost:2080",
     "search.defaultViewMode": "tree",
     "files.associations": {
         "*.env.development": "env",
-        "*.env.production": "env"
+        "*.env.production": "env",
+        "*.zig": "c"
     },
     "outline.icons": false,
     "breadcrumbs.icons": false,
@@ -98,6 +99,15 @@
     "emmet.triggerExpansionOnTab": false,
     /* ------------------- Default Formatter and Lang Settings ------------------ */
     // "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "C_Cpp.clang_format_style": "file",
+    "C_Cpp.clang_format_path": "/usr/bin/clang-format",
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "[cpp]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
     "[shellscript]": {
         "editor.defaultFormatter": "mkhl.shfmt"
     },
@@ -175,7 +185,7 @@
     "cSpell.language": "en,fa",
     /* ------------------------------ Explorer Settings ------------------------- */
     "explorer.compactFolders": false,
-    "explorer.confirmDelete": false,
+    "explorer.confirmDelete": true,
     "explorer.confirmDragAndDrop": false,
     "explorer.decorations.colors": true,
     "explorer.sortOrder": "type",
@@ -251,7 +261,10 @@
         "!Split sequence"
     ],
     "yaml.schemas": {
-        "file:///home/hesam/.vscode/extensions/atlassian.atlascode-3.0.10/resources/schemas/pipelines-schema.json": "bitbucket-pipelines.yml"
+        "file:///home/hesam/.vscode/extensions/atlassian.atlascode-3.0.10/resources/schemas/pipelines-schema.json": "bitbucket-pipelines.yml",
+        "file:///home/hesam/.vscode-oss/extensions/continue.continue-1.2.22-linux-x64/config-yaml-schema.json": [
+            ".continue/**/*.yaml"
+        ]
     },
     "terminal.integrated.fontFamily": "monospace",
     "workbench.tree.enableStickyScroll": false,
@@ -287,5 +300,24 @@
     },
     "biome.suggestInstallingGlobally": false,
     "animations.CursorAnimation": true,
-    "workbench.colorTheme": "GitHub Dark Default"
+    "workbench.colorTheme": "GitHub Dark Default",
+    "[yaml]": {
+        "editor.defaultFormatter": "redhat.vscode-yaml"
+    },
+    "gitlens.ai.model": "gemini:gemini-2.5-pro",
+    "json.schemaDownload.trustedDomains": {
+        "https://schemastore.azurewebsites.net/": true,
+        "https://raw.githubusercontent.com/": true,
+        "https://www.schemastore.org/": true,
+        "https://json.schemastore.org/": true,
+        "https://json-schema.org/": true,
+        "https://biomejs.dev": true
+    },
+    "[markdown]": {
+        "editor.defaultFormatter": "DavidAnson.vscode-markdownlint"
+    },
+    "[dockercompose]": {
+        "editor.defaultFormatter": "redhat.vscode-yaml"
+    },
+    "workbench.secondarySideBar.defaultVisibility": "hidden"
 }
